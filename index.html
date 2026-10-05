@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Machine Fault Detection Using Vibration Signal Analysis</title>
+<meta name="description" content="Signals and Systems mini project: detecting bearing faults with the Fourier transform and energy/power analysis in Scilab.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f3f7fa;--ink:#14213d;--muted:#51607a;--line:#c9d6e2;--ok:#1b998b;--bad:#d1345b;--panel:#ffffff}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 17px/1.65 "IBM Plex Sans",system-ui,sans-serif;
+background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+background-size:40px 40px;background-attachment:fixed}
+body::before{content:"";position:fixed;inset:0;background:rgba(243,247,250,.78);z-index:-1}
+h1,h2,h3{font-family:"Bricolage Grotesque","Segoe UI",sans-serif;line-height:1.1;margin:0}
+a{color:var(--ink)}
+a:focus-visible,button:focus-visible{outline:3px solid var(--bad);outline-offset:3px}
+.wrap{max-width:960px;margin:0 auto;padding:0 24px}
+nav{display:flex;gap:24px;flex-wrap:wrap;padding:20px 0;font-weight:500}
+nav a{text-decoration:none;color:var(--muted)}
+nav a:hover{color:var(--ink)}
+.hero{padding:40px 0 24px}
+.hero h1{font-size:clamp(2.2rem,6vw,4rem);font-weight:800;max-width:15em}
+.hero p{max-width:38em;color:var(--muted);font-size:1.1rem;margin:20px 0 0}
+.scope{background:var(--panel);border:2px solid var(--ink);margin-top:36px;padding:16px 16px 8px}
+.scope figcaption{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:.9rem;color:var(--muted);padding-top:4px}
+.scope svg{width:100%;height:auto;display:block}
+.tr{fill:none;stroke-width:1.6;stroke-linejoin:round}
+.draw{stroke-dasharray:1;stroke-dashoffset:1;animation:draw 2.4s ease-out forwards}
+.draw.b{animation-delay:.6s}
+@keyframes draw{to{stroke-dashoffset:0}}
+.k-ok{color:var(--ok);font-weight:500}.k-bad{color:var(--bad);font-weight:500}
+section{padding:56px 0 8px}
+h2{font-size:2rem;font-weight:800;margin-bottom:16px}
+h3{font-size:1.2rem;font-weight:600;margin-bottom:6px}
+p{margin:0 0 14px;max-width:44em}
+ol.steps{padding-left:22px;max-width:44em}
+ol.steps li{margin-bottom:10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;margin-top:20px}
+.box{background:var(--panel);border:1px solid var(--line);border-left:5px solid var(--ink);padding:18px 20px}
+.box.ok{border-left-color:var(--ok)}.box.bad{border-left-color:var(--bad)}
+.tablewrap{overflow-x:auto;background:var(--panel);border:1px solid var(--line)}
+table{border-collapse:collapse;width:100%;min-width:480px}
+th,td{padding:12px 16px;text-align:left;border-bottom:1px solid var(--line)}
+th{font-family:"Bricolage Grotesque",sans-serif;font-weight:600}
+pre{background:var(--ink);color:#e8eef5;padding:18px;overflow-x:auto;font:14px/1.5 ui-monospace,Consolas,monospace;margin:0 0 14px}
+.btn{display:inline-block;background:var(--ink);color:#fff;padding:10px 18px;text-decoration:none;font-weight:500}
+.btn:hover{background:var(--bad)}
+footer{margin-top:64px;padding:28px 0;border-top:2px solid var(--ink);color:var(--muted);font-size:.95rem}
+@media (prefers-reduced-motion:reduce){.draw{animation:none;stroke-dashoffset:0}html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav aria-label="Main">
+  <a href="#objective">Objective</a><a href="#method">Method</a><a href="#results">Results</a><a href="#code">Code</a><a href="#team">Team</a>
+</nav>
+
+<header class="hero">
+  <h1>Machine fault detection using vibration signals</h1>
+  <p>A Signals and Systems mini project. We use the Fourier transform and energy/power analysis to tell a healthy machine from one with a bearing fault, using Scilab.</p>
+  <figure class="scope" aria-label="Healthy and faulty vibration waveforms">
+    <svg id="scope" viewBox="0 0 900 300" role="img" aria-label="Healthy signal is a smooth wave. Faulty signal has repeating sharp impacts."></svg>
+    <figcaption><span class="k-ok">Healthy: shaft frequency and one harmonic</span><span class="k-bad">Faulty: periodic impacts ringing on top</span></figcaption>
+  </figure>
+</header>
+
+<section id="objective">
+  <h2>Objective</h2>
+  <p>Machines such as motors and pumps shake in a pattern that changes when a bearing starts to fail. We analyse that vibration signal in the time and frequency domains and decide whether the machine is healthy or faulty.</p>
+  <div class="grid">
+    <div class="box"><h3>Course outcome 1</h3>Generate signals, add noise and apply basic signal operations.</div>
+    <div class="box"><h3>Course outcome 3</h3>Analyse spectral content with the Fourier transform.</div>
+    <div class="box"><h3>Experiments 3, 5 and 8</h3>Energy and power, magnitude spectrum, and a self-designed real-signal experiment.</div>
+  </div>
+</section>
+
+<section id="method">
+  <h2>Method</h2>
+  <ol class="steps">
+    <li>Generate the healthy signal: a shaft-frequency sine, its second harmonic and random noise.</li>
+    <li>Generate the faulty signal: add periodic impacts at the fault frequency, each ringing at a structural resonance.</li>
+    <li>Plot both signals in the time domain.</li>
+    <li>Compute the FFT and plot the magnitude spectrum of each signal.</li>
+    <li>Compute energy and power in the time domain and check them against the spectrum with Parseval's theorem.</li>
+    <li>Compare RMS, peak and kurtosis, then classify the machine as healthy or faulty.</li>
+  </ol>
+  <div class="box"><h3>Energy and power</h3>
+    <p style="margin:0">Energy is the sum of x² divided by the sampling frequency. Power is energy divided by the duration. A faulty bearing adds impact energy, so its power rises, mostly in the resonance band.</p>
+  </div>
+</section>
+
+<section id="results">
+  <h2>Results</h2>
+  <p>Run the script and paste your values here. These cells are placeholders.</p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Parameter</th><th>Healthy</th><th>Faulty</th></tr></thead>
+      <tbody>
+        <tr><td>Energy</td><td>0.0000</td><td>0.0000</td></tr>
+        <tr><td>Power</td><td>0.0000</td><td>0.0000</td></tr>
+        <tr><td>Power in 2.5 to 3.5 kHz band</td><td>0.0000</td><td>0.0000</td></tr>
+        <tr><td>RMS</td><td>0.0000</td><td>0.0000</td></tr>
+        <tr><td>Kurtosis</td><td>0.0000</td><td>0.0000</td></tr>
+        <tr><td>Decision</td><td class="k-ok">Healthy</td><td class="k-bad">Faulty</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="margin-top:14px">Add your screenshots to an <code>images</code> folder and show them with <code>&lt;img src="images/spectrum.png" alt="Magnitude spectra"&gt;</code>.</p>
+</section>
+
+<section id="code">
+  <h2>Code</h2>
+  <pre><code>fs = 10000; T = 1; t = 0:1/fs:T-1/fs;
+E = sum(x.^2) / fs;     // energy
+P = E / T;              // power
+X = fft(x);             // spectrum</code></pre>
+  <a class="btn" href="vibration_fault_detection.sce" download>Download the full Scilab script</a>
+</section>
+
+<section id="team">
+  <h2>Team</h2>
+  <p>Replace this with your names, roll numbers, class, guide and college.</p>
+</section>
+
+<footer>Signals and Systems mini project, 2026. Reference: B P Lathi, Linear Systems and Signals, Oxford University Press.</footer>
+</div>
+
+<script>
+// Draws the healthy and faulty traces from the same model as the Scilab script.
+(function(){
+  var fs=10000,n=1000,f=30,fault=107,res=3000,seed=1;
+  function rnd(){seed=(seed*16807)%2147483647;return seed/2147483647-.5}
+  var h=[],imp=[],i,j;
+  for(i=0;i<n;i++){imp.push(0);h.push(Math.sin(2*Math.PI*f*i/fs)+.5*Math.sin(2*Math.PI*2*f*i/fs)+.35*rnd())}
+  for(var k=0;k<n;k+=fs/fault){var s=Math.round(k);
+    for(j=0;s+j<n&&j<100;j++){imp[s+j]+=1.5*Math.exp(-800*j/fs)*Math.sin(2*Math.PI*res*j/fs)}}
+  function path(a,y0,sc){var d="";for(var x=0;x<n;x++){d+=(x?"L":"M")+(x*0.9).toFixed(1)+" "+(y0-a[x]*sc).toFixed(1)}return d}
+  var fy=h.map(function(v,x){return v+imp[x]});
+  var svg=document.getElementById("scope"),ns="http://www.w3.org/2000/svg";
+  function add(d,color,cls){var p=document.createElementNS(ns,"path");p.setAttribute("d",d);p.setAttribute("pathLength","1");
+    p.setAttribute("class","tr draw "+cls);p.setAttribute("stroke",color);svg.appendChild(p)}
+  var mid=document.createElementNS(ns,"line");
+  mid.setAttribute("x1",0);mid.setAttribute("x2",900);mid.setAttribute("y1",150);mid.setAttribute("y2",150);
+  mid.setAttribute("stroke","#c9d6e2");svg.appendChild(mid);
+  add(path(h,80,38),"#1b998b","a");
+  add(path(fy,225,38),"#d1345b","b");
+})();
+</script>
+</body>
+</html>
